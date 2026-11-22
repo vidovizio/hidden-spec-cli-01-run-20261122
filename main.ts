@@ -468,7 +468,13 @@ function searchReplaceEdits(lines: string[], strict: boolean): Edit[] {
     if (path === null) path = prevPath;
     if (path === null) throw new Exit2(`error: parse ${at + 1}`);
     let split = at + 1;
-    while (split < lines.length && lines[split]!.trimEnd() !== SR_SPLIT) split += 1;
+    // SPEC 7: a SEARCH line with no `=======` and then `>>>>>>> REPLACE` after it is a parse
+    // fault at the SEARCH line. Stop at that marker: reading on would take the next block's
+    // `=======` and turn a malformed block into a bogus edit instead of a parse error.
+    while (split < lines.length && lines[split]!.trimEnd() !== SR_SPLIT) {
+      if (lines[split]!.trimEnd() === SR_REPLACE) throw new Exit2(`error: parse ${at + 1}`);
+      split += 1;
+    }
     if (split >= lines.length) throw new Exit2(`error: parse ${at + 1}`);
     let end = split + 1;
     while (end < lines.length && lines[end]!.trimEnd() !== SR_REPLACE) end += 1;
